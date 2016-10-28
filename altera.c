@@ -202,11 +202,8 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	int done = 0;
 	int bad_opcode = 0;
 	uint32_t count;
-	uint32_t index;
-	uint32_t index2;
-	int32_t cnt;
-	int32_t idx;
-	int32_t idx2;
+	uint32_t idx;
+	uint32_t idx2;
 	uint32_t i;
 	uint32_t j;
 	uint32_t uncomp_size;
@@ -888,10 +885,10 @@ exit_done:
 			}
 
 			/* SWPN 7 */
-			index = 7 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				tmp = stack[stack_ptr - index];
-				stack[stack_ptr - index] = stack[stack_ptr - 1];
+			idx = 7 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				tmp = stack[stack_ptr - idx];
+				stack[stack_ptr - idx] = stack[stack_ptr - 1];
 				stack[stack_ptr - 1] = tmp;
 			}
 
@@ -903,25 +900,25 @@ exit_done:
 			}
 
 			/* SWPN 6 */
-			index = 6 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				tmp = stack[stack_ptr - index];
-				stack[stack_ptr - index] = stack[stack_ptr - 1];
+			idx = 6 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				tmp = stack[stack_ptr - idx];
+				stack[stack_ptr - idx] = stack[stack_ptr - 1];
 				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* DUPN 8 */
-			index = 8 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				stack[stack_ptr] = stack[stack_ptr - index];
+			idx = 8 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				stack[stack_ptr] = stack[stack_ptr - idx];
 				++stack_ptr;
 			}
 
 			/* SWPN 2 */
-			index = 2 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				tmp = stack[stack_ptr - index];
-				stack[stack_ptr - index] = stack[stack_ptr - 1];
+			idx = 2 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				tmp = stack[stack_ptr - idx];
+				stack[stack_ptr - idx] = stack[stack_ptr - 1];
 				stack[stack_ptr - 1] = tmp;
 			}
 
@@ -933,16 +930,16 @@ exit_done:
 			}
 
 			/* DUPN 6 */
-			index = 6 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				stack[stack_ptr] = stack[stack_ptr - index];
+			idx = 6 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				stack[stack_ptr] = stack[stack_ptr - idx];
 				++stack_ptr;
 			}
 
 			/* DUPN 6 */
-			index = 6 + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				stack[stack_ptr] = stack[stack_ptr - index];
+			idx = 6 + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				stack[stack_ptr] = stack[stack_ptr - idx];
 				++stack_ptr;
 			}
 			break;
@@ -1043,10 +1040,10 @@ exit_done:
 			 * ...argument 0 is 0-based stack entry
 			 * to swap with top element
 			 */
-			index = (args[0]) + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				tmp = stack[stack_ptr - index];
-				stack[stack_ptr - index] = stack[stack_ptr - 1];
+			idx = (args[0]) + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				tmp = stack[stack_ptr - idx];
+				stack[stack_ptr - idx] = stack[stack_ptr - 1];
 				stack[stack_ptr - 1] = tmp;
 			}
 			break;
@@ -1055,9 +1052,9 @@ exit_done:
 			 * Duplicate Nth stack value
 			 * ...argument 0 is 0-based stack entry to duplicate
 			 */
-			index = (args[0]) + 1;
-			if (altera_check_stack(stack_ptr, index, &status)) {
-				stack[stack_ptr] = stack[stack_ptr - index];
+			idx = (args[0]) + 1;
+			if (altera_check_stack(stack_ptr, idx, &status)) {
+				stack[stack_ptr] = stack[stack_ptr - idx];
 				++stack_ptr;
 			}
 			break;
@@ -1125,10 +1122,10 @@ exit_done:
 				ptr_tmp = (int32_t *)vars[variable_id];
 
 				/* pop the array index */
-				index = stack[--stack_ptr];
+				idx = stack[--stack_ptr];
 
 				/* pop the value and store it into the array */
-				ptr_tmp[index] = stack[--stack_ptr];
+				ptr_tmp[idx] = stack[--stack_ptr];
 			}
 
 			break;
@@ -1205,7 +1202,7 @@ exit_done:
 			charptr_tmp = (uint8_t *)vars[variable_id];
 
 			/* pop the count (number of bits to copy) */
-			cnt = stack[--stack_ptr];
+			count = stack[--stack_ptr];
 
 			/* pop the array index */
 			idx = stack[--stack_ptr];
@@ -1218,18 +1215,18 @@ exit_done:
 				 * stack 1 = array left index
 				 */
 
-				if (idx > cnt) {
+				if (idx > count) {
 					reverse = 1;
-					tmp = cnt;
-					cnt = 1 + idx -
-								cnt;
+					tmp = count;
+					count = 1 + idx -
+								count;
 					idx = tmp;
 
 					/* reverse POPA is not supported */
 					status = ALTERA_BOUNDS_ERROR;
 					break;
 				} else
-					cnt = 1 + cnt -
+					count = 1 + count -
 								idx;
 
 			}
@@ -1237,12 +1234,12 @@ exit_done:
 			/* pop the data */
 			tmp = stack[--stack_ptr];
 
-			if (cnt < 1) {
+			if (count < 1) {
 				status = ALTERA_BOUNDS_ERROR;
 				break;
 			}
 
-			for (i = 0; i < cnt; ++i) {
+			for (i = 0; i < count; ++i) {
 				if (tmp & (1 << (int32_t) i))
 					charptr_tmp[idx >> 3] |=
 						(1 << (idx & 7));
@@ -1281,7 +1278,7 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
 			idx = stack[--stack_ptr];
-			cnt = stack[--stack_ptr];
+			count = stack[--stack_ptr];
 			reverse = 0;
 			if (version > 0) {
 				/*
@@ -1289,8 +1286,8 @@ exit_done:
 				 * stack 1 = array left index
 				 * stack 2 = count
 				 */
-				tmp = cnt;
-				cnt = stack[--stack_ptr];
+				tmp = count;
+				count = stack[--stack_ptr];
 
 				if (idx > tmp) {
 					reverse = 1;
@@ -1306,15 +1303,15 @@ exit_done:
 				 * and reverse the data order
 				 */
 				charptr_tmp2 = charptr_tmp;
-				charptr_tmp = calloc(1, (cnt >> 3) + 1);
+				charptr_tmp = calloc(1, (count >> 3) + 1);
 				if (charptr_tmp == NULL) {
 					status = ALTERA_OUT_OF_MEMORY;
 					break;
 				}
 
-				tmp = idx + cnt - 1;
+				tmp = idx + count - 1;
 				idx2 = 0;
-				while (idx2 < cnt) {
+				while (idx2 < count) {
 					if (charptr_tmp2[tmp >> 3] &
 							(1 << (tmp & 7)))
 						charptr_tmp[idx2 >> 3] |=
@@ -1329,10 +1326,10 @@ exit_done:
 			}
 
 			if (opcode == 0x51) /* DS */
-				status = altera_drscan(js, cnt,
+				status = altera_drscan(js, count,
 						charptr_tmp, idx);
 			else /* IS */
-				status = altera_irscan(js, cnt,
+				status = altera_irscan(js, count,
 						charptr_tmp, idx);
 
 			if (reverse)
@@ -1348,7 +1345,7 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			index = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
 			count = stack[--stack_ptr];
 
 			if (version > 0)
@@ -1356,10 +1353,10 @@ exit_done:
 				 * stack 0 = array right index
 				 * stack 1 = array left index
 				 */
-				count = 1 + count - index;
+				count = 1 + count - idx;
 
 			charptr_tmp = (uint8_t *)vars[args[0]];
-			status = altera_set_dr_pre(js, count, index,
+			status = altera_set_dr_pre(js, count, idx,
 							charptr_tmp);
 			break;
 		case OP_DPOA:
@@ -1371,7 +1368,7 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			index = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
 			count = stack[--stack_ptr];
 
 			if (version > 0)
@@ -1379,10 +1376,10 @@ exit_done:
 				 * stack 0 = array right index
 				 * stack 1 = array left index
 				 */
-				count = 1 + count - index;
+				count = 1 + count - idx;
 
 			charptr_tmp = (uint8_t *)vars[args[0]];
-			status = altera_set_dr_post(js, count, index,
+			status = altera_set_dr_post(js, count, idx,
 							charptr_tmp);
 			break;
 		case OP_IPRA:
@@ -1394,7 +1391,7 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			index = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
 			count = stack[--stack_ptr];
 
 			if (version > 0)
@@ -1402,10 +1399,10 @@ exit_done:
 				 * stack 0 = array right index
 				 * stack 1 = array left index
 				 */
-				count = 1 + count - index;
+				count = 1 + count - idx;
 
 			charptr_tmp = (uint8_t *)vars[args[0]];
-			status = altera_set_ir_pre(js, count, index,
+			status = altera_set_ir_pre(js, count, idx,
 							charptr_tmp);
 
 			break;
@@ -1418,7 +1415,7 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			index = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
 			count = stack[--stack_ptr];
 
 			if (version > 0)
@@ -1426,10 +1423,10 @@ exit_done:
 				 * stack 0 = array right index
 				 * stack 1 = array left index
 				 */
-				count = 1 + count - index;
+				count = 1 + count - idx;
 
 			charptr_tmp = (uint8_t *)vars[args[0]];
-			status = altera_set_ir_post(js, count, index,
+			status = altera_set_ir_post(js, count, idx,
 							charptr_tmp);
 
 			break;
@@ -1454,17 +1451,17 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 1, &status))
 				break;
 			variable_id = args[0];
-			index = stack[stack_ptr - 1];
+			idx = stack[stack_ptr - 1];
 
 			/* check variable type */
 			if ((attrs[variable_id] & 0x1f) == 0x19) {
 				/* writable integer array */
 				ptr_tmp = (int32_t *)vars[variable_id];
-				stack[stack_ptr - 1] = ptr_tmp[index];
+				stack[stack_ptr - 1] = ptr_tmp[idx];
 			} else if ((attrs[variable_id] & 0x1f) == 0x1c) {
 				/* read-only integer array */
 				tmp = vars[variable_id] +
-						(index * sizeof(int32_t));
+						(idx * sizeof(int32_t));
 				stack[stack_ptr - 1] =
 					get_unaligned_be32(&p[tmp]);
 			} else
@@ -1494,14 +1491,14 @@ exit_done:
 			count = stack[--stack_ptr];
 
 			/* pop the array index */
-			index = stack[stack_ptr - 1];
+			idx = stack[stack_ptr - 1];
 
 			if (version > 0)
 				/*
 				 * stack 0 = array right index
 				 * stack 1 = array left index
 				 */
-				count = 1 + count - index;
+				count = 1 + count - idx;
 
 			if ((count < 1) || (count > 32)) {
 				status = ALTERA_BOUNDS_ERROR;
@@ -1511,8 +1508,8 @@ exit_done:
 			tmp = 0;
 
 			for (i = 0; i < count; ++i)
-				if (charptr_tmp[(i + index) >> 3] &
-						(1 << ((i + index) & 7)))
+				if (charptr_tmp[(i + idx) >> 3] &
+						(1 << ((i + idx) & 7)))
 					tmp |= (1 << i);
 
 			stack[stack_ptr - 1] = tmp;
@@ -1569,8 +1566,8 @@ exit_done:
 				/* zero out memory */
 				count = ((var_size[variable_id] + 7) / 8);
 				charptr_tmp = (uint8_t *)(vars[variable_id]);
-				for (index = 0; index < count; ++index)
-					charptr_tmp[index] = 0;
+				for (idx = 0; idx < count; ++idx)
+					charptr_tmp[idx] = 0;
 
 			}
 
@@ -1601,7 +1598,7 @@ exit_done:
 				break;
 			}
 
-			cnt = 1 + idx2 - idx;
+			count = 1 + idx2 - idx;
 
 			charptr_tmp = (uint8_t *)vars[variable_id];
 			charptr_tmp2 = NULL;
@@ -1609,13 +1606,13 @@ exit_done:
 			if ((idx & 7) != 0) {
 				int32_t k = idx;
 				charptr_tmp2 =
-					calloc(1, ((cnt + 7) / 8));
+					calloc(1, ((count + 7) / 8));
 				if (charptr_tmp2 == NULL) {
 					status = ALTERA_OUT_OF_MEMORY;
 					break;
 				}
 
-				for (i = 0; i < cnt; ++i) {
+				for (i = 0; i < count; ++i) {
 					if (charptr_tmp[k >> 3] &
 							(1 << (k & 7)))
 						charptr_tmp2[i >> 3] |=
@@ -1632,7 +1629,7 @@ exit_done:
 				charptr_tmp = &charptr_tmp[idx >> 3];
 
 			altera_export_bool_array(name, charptr_tmp,
-							cnt);
+							count);
 
 			/* free allocated buffer */
 			if ((idx & 7) != 0)
@@ -1650,7 +1647,7 @@ exit_done:
 			 */
 			int32_t copy_count;
 			int32_t copy_index;
-			int32_t copy_index2;
+			int32_t copy_idx2;
 			int32_t destleft;
 			int32_t src_count;
 			int32_t dest_count;
@@ -1662,7 +1659,7 @@ exit_done:
 
 			copy_count = stack[--stack_ptr];
 			copy_index = stack[--stack_ptr];
-			copy_index2 = stack[--stack_ptr];
+			copy_idx2 = stack[--stack_ptr];
 			reverse = 0;
 
 			if (version > 0) {
@@ -1685,14 +1682,14 @@ exit_done:
 					copy_index = copy_count;
 				}
 
-				if (copy_index2 > destleft) {
+				if (copy_idx2 > destleft) {
 					dest_reverse = 1;
 					reverse = !reverse;
-					dest_count = 1 + copy_index2 - destleft;
+					dest_count = 1 + copy_idx2 - destleft;
 					/* destination start index */
-					copy_index2 = destleft;
+					copy_idx2 = destleft;
 				} else
-					dest_count = 1 + destleft - copy_index2;
+					dest_count = 1 + destleft - copy_idx2;
 
 				copy_count = (src_count < dest_count) ?
 							src_count : dest_count;
@@ -1712,8 +1709,8 @@ exit_done:
 			}
 
 			count = copy_count;
-			index = copy_index;
-			index2 = copy_index2;
+			idx = copy_index;
+			idx2 = copy_idx2;
 
 			/*
 			 * If destination is a read-only array,
@@ -1774,22 +1771,22 @@ exit_done:
 			}
 
 			if (reverse)
-				index2 += (count - 1);
+				idx2 += (count - 1);
 
 			for (i = 0; i < count; ++i) {
-				if (charptr_tmp2[index >> 3] &
-							(1 << (index & 7)))
-					charptr_tmp[index2 >> 3] |=
-							(1 << (index2 & 7));
+				if (charptr_tmp2[idx >> 3] &
+							(1 << (idx & 7)))
+					charptr_tmp[idx2 >> 3] |=
+							(1 << (idx2 & 7));
 				else
-					charptr_tmp[index2 >> 3] &=
-						~(1 << (index2 & 7));
+					charptr_tmp[idx2 >> 3] &=
+						~(1 << (idx2 & 7));
 
-				++index;
+				++idx;
 				if (reverse)
-					--index2;
+					--idx2;
 				else
-					++index2;
+					++idx2;
 			}
 
 			break;
@@ -1832,7 +1829,7 @@ exit_done:
 				scan_index = scan_right;
 			}
 
-			cnt = stack[--stack_ptr];
+			count = stack[--stack_ptr];
 			/*
 			 * If capture array is read-only, allocate a buffer
 			 * and convert it to a writable array
@@ -1884,8 +1881,8 @@ exit_done:
 			charptr_tmp2 = (uint8_t *)vars[args[1]];
 
 			if ((version > 0) &&
-					((cnt > capture_count) ||
-					(cnt > scan_count))) {
+					((count > capture_count) ||
+					(count > scan_count))) {
 				status = ALTERA_BOUNDS_ERROR;
 				break;
 			}
@@ -1902,14 +1899,14 @@ exit_done:
 			if (status == 0) {
 				if (opcode == 0x82) /* DSC */
 					status = altera_swap_dr(js,
-							cnt,
+							count,
 							charptr_tmp,
 							scan_index,
 							charptr_tmp2,
 							capture_index);
 				else /* ISC */
 					status = altera_swap_ir(js,
-							cnt,
+							count,
 							charptr_tmp,
 							scan_index,
 							charptr_tmp2,
@@ -1966,17 +1963,15 @@ exit_done:
 			uint8_t *source1 = (uint8_t *)vars[args[0]];
 			uint8_t *source2 = (uint8_t *)vars[args[1]];
 			uint8_t *mask = (uint8_t *)vars[args[2]];
-			uint32_t index1;
-			uint32_t index2;
 			uint32_t mask_index;
 
 			if (!altera_check_stack(stack_ptr, 4, &status))
 				break;
 
-			index1 = stack[--stack_ptr];
-			index2 = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
+			idx2 = stack[--stack_ptr];
 			mask_index = stack[--stack_ptr];
-			cnt = stack[--stack_ptr];
+			count = stack[--stack_ptr];
 
 			if (version > 0) {
 				/*
@@ -1990,42 +1985,40 @@ exit_done:
 				int32_t mask_right = stack[--stack_ptr];
 				int32_t mask_left = stack[--stack_ptr];
 				/* source 1 count */
-				a = 1 + index2 - index1;
+				a = 1 + idx2 - idx;
 				/* source 2 count */
-				b = 1 + cnt - mask_index;
+				b = 1 + count - mask_index;
 				a = (a < b) ? a : b;
 				/* mask count */
 				b = 1 + mask_left - mask_right;
 				a = (a < b) ? a : b;
 				/* source 2 start index */
-				index2 = mask_index;
+				idx2 = mask_index;
 				/* mask start index */
 				mask_index = mask_right;
-				cnt = a;
+				count = a;
 			}
 
 			tmp = 1;
 
-			if (cnt < 1)
+			if (count < 1)
 				status = ALTERA_BOUNDS_ERROR;
 			else {
-				count = cnt;
-
 				for (i = 0; i < count; ++i) {
 					if (mask[mask_index >> 3] &
 						(1 << (mask_index & 7))) {
-						a = source1[index1 >> 3] &
-							(1 << (index1 & 7))
+						a = source1[idx >> 3] &
+							(1 << (idx & 7))
 								? 1 : 0;
-						b = source2[index2 >> 3] &
-							(1 << (index2 & 7))
+						b = source2[idx2 >> 3] &
+							(1 << (idx2 & 7))
 								? 1 : 0;
 
 						if (a != b) /* failure */
 							tmp = 0;
 					}
-					++index1;
-					++index2;
+					++idx;
+					++idx2;
 					++mask_index;
 				}
 			}
