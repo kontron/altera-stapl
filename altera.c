@@ -205,7 +205,6 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	uint32_t idx;
 	uint32_t idx2;
 	uint32_t i;
-	uint32_t j;
 	uint32_t uncomp_size;
 	uint32_t offset;
 	uint32_t value;
@@ -353,11 +352,6 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 
 				if (vars[i] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
-				} else {
-					/* zero out memory */
-					for (j = 0; j < size; ++j)
-						((uint8_t *)(vars[i]))[j] = 0;
-
 				}
 			} else
 				vars[i] = 0;
@@ -1158,13 +1152,6 @@ exit_done:
 					break;
 				}
 
-				/* zero the buffer */
-				for (idx = 0;
-					idx < tmp;
-					++idx) {
-					charptr_tmp[idx] = 0;
-				}
-
 				/* copy previous contents into buffer */
 				for (idx = 0;
 					idx < var_size[variable_id];
@@ -1562,13 +1549,6 @@ exit_done:
 				 * should be freed later
 				 */
 				attrs[variable_id] |= 0x80;
-
-				/* zero out memory */
-				count = ((var_size[variable_id] + 7) / 8);
-				charptr_tmp = (uint8_t *)(vars[variable_id]);
-				for (idx = 0; idx < count; ++idx)
-					charptr_tmp[idx] = 0;
-
 			}
 
 			break;
@@ -1730,10 +1710,6 @@ exit_done:
 					break;
 				}
 
-				/* zero the buffer */
-				for (idx = 0; idx < tmp; ++idx)
-					charptr_tmp[idx] = 0;
-
 				/* copy previous contents into buffer */
 				for (idx = 0;
 					idx < var_size[variable_id];
@@ -1847,10 +1823,6 @@ exit_done:
 					status = ALTERA_OUT_OF_MEMORY;
 					break;
 				}
-
-				/* zero the buffer */
-				for (idx = 0; idx < tmp; ++idx)
-					charptr_tmp[idx] = 0;
 
 				/* copy previous contents into buffer */
 				for (idx = 0;
@@ -2287,8 +2259,7 @@ int altera_get_act_info(uint8_t *p, int32_t program_size, int index,
 		act_proc_attribute =
 			(p[proc_table + (13 * act_proc_id) + 8] & 0x03);
 
-		procptr =
-				calloc(1, sizeof(struct altera_procinfo));
+		procptr = calloc(1, sizeof(struct altera_procinfo));
 
 		if (procptr == NULL)
 			status = ALTERA_OUT_OF_MEMORY;
