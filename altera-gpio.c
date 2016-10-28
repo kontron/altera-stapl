@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include "altera.h"
 
 #ifndef VERSION
@@ -47,8 +48,6 @@ int gpio_fds[4] = {0,0,0,0};
 int gpio_state[4] = {-1,-1,-1,-1};
 
 int jtag_hardware_initialized = 0;
-
-int verbose = 0;
 
 #define GPIO_PATH "/sys/class/gpio/"
 #define GPIO_EXPORT_PATH GPIO_PATH "export"
@@ -244,62 +243,58 @@ static const char *exit_text_jam_v2[] = {
 };
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+void usage(const char *progname)
+{
+	fprintf(stderr,
+			"Jam STAPL ByteCode Player Version %s\n"
+			"\n"
+			"usage: %s [options] <jbc-file>\n"
+			"\n"
+			"Options:\n"
+			"    -h          : show help message\n"
+			"    -v          : show verbose messages\n"
+			"    -i          : show file info only - does not execute any action\n"
+			"    -a<action>  : specify an action name (Jam STAPL)\n"
+			"    -d<var=val> : initialize variable to specified value (Jam 1.1)\n"
+			"    -d<proc=1>  : enable optional procedure (Jam STAPL)\n"
+			"    -d<proc=0>  : disable recommended procedure (Jam STAPL)\n"
+			"    -r          : don't reset JTAG TAP after use\n"
+			"    -g<gpios>   : set gpio pin numbers, see below\n",
+			VERSION, progname);
+}
+
 int main(int argc, char **argv)
 {
-	int help = 0;
-	int error = 0;
+	int error;
+	int opt;
 	char *filename = NULL;
-	int32_t offset = 0L;
-	int32_t error_address = 0L;
-	int crc_result = ALTERA_SUCCESS;
-	int exec_result = ALTERA_SUCCESS;
-	char key[33] = {0};
-	char value[257] = {0};
-	int exit_status = 0;
-	int arg = 0;
-	int exit_code = 0;
-	int format_version = 0;
-	time_t start_time = 0;
-	time_t end_time = 0;
-	int time_delta = 0;
 	char *action = NULL;
-	struct altera_varinit *init_list[10];
-	int init_count = 0;
-	FILE *fp = NULL;
-	struct stat sbuf;
-	const char *exit_string = NULL;
-	int execute_program = 1;
-	int action_count = 0;
-	int procedure_count = 0;
-	int index = 0;
-	char *action_name = NULL;
-	char *description = NULL;
-	struct altera_procinfo *procedure_list = NULL;
-	struct altera_procinfo *procptr = NULL;
-	unsigned char *file_buffer = NULL;
-	size_t file_length = 0L;
+	bool verbose = false;
+	bool execute_program = true;
+	struct altera_varinit *init_list[10] = { NULL };
+	FILE *fp;
+	unsigned char *file_buffer;
+	off_t file_length;
 
-	verbose = 0;
-
-	init_list[0] = NULL;
-
-	/* print out the version string and copyright message */
-	fprintf(stderr, "Jam STAPL ByteCode Player Version %s\n", VERSION);
-
-	for (arg = 1; arg < argc; arg++) {
-		if (argv[arg][0] == '-') {
-			switch(argv[arg][1]) {
-			case 'a':				/* set action name */
-				if (action == NULL) {
-					action = &argv[arg][2];
-				} else {
-					error = 1;
-				}
+	while ((opt = getopt(argc, argv, "hvia:d:rg:V")) != -1) {
+		switch (opt) {
+			case 'h':
+				usage(argv[0]);
+				return EXIT_SUCCESS;
+			case 'v':
+				verbose = true;
 				break;
-
-			case 'd':				/* initialization list */
+			case 'i':
+				verbose = true;
+				execute_program = false;
+				break;
+			case 'a':
+				action = optarg;
+				break;
+			case 'd':
 			{
-				char *name = &argv[arg][2];
+				int i = 0;
+				char *name = optarg;
 				char *value_str = strchr(name, '=');
 				uint32_t value;
 
@@ -307,263 +302,201 @@ int main(int argc, char **argv)
 					*(value_str++) = '\n';
 					value = strtoul(value_str, NULL, 0);
 
-					init_list[init_count] = malloc(sizeof(struct altera_varinit));
-					init_list[init_count]->name = name;
-					init_list[init_count]->value = value;
+					init_list[i] = alloca(sizeof(struct altera_varinit));
+					init_list[i]->name = name;
+					init_list[i]->value = value;
 				}
 
-				init_list[++init_count] = NULL;
+				init_list[++i] = NULL;
 			} break;
-
-			case 'h':				/* help */
-				help = 1;
+			case 'r':
 				break;
-
-			case 'v':				/* verbose */
-				verbose = 1;
-				break;
-
-			case 'i':				/* show info only, do not execute */
-				verbose = 1;
-				execute_program = 0;
-				break;
-
-			case 'g':				/* gpio pin numbers */
+			case 'g':
 			{
-				char *argstr = &argv[arg][2];
 				int i;
 				char *c;
 				for (i = 0; i < 4; i++) {
-					gpio_pins[i] = strtoul(argstr, &c, 10);
+					gpio_pins[i] = strtoul(optarg, &c, 10);
 					if ((i < 3 && *c != ':') || (i == 3 && *c != '\0')) {
-						error = 1;
-						break;
+						usage(argv[0]);
+						return EXIT_FAILURE;
 					}
-					argstr = c+1;
+					optarg = c + 1;
 				}
 			} break;
-			default:
-				error = 1;
 				break;
-			}
-		} else {
-			/* it's a filename */
-			if (filename == NULL) {
-				filename = argv[arg];
-			} else {
-				/* error -- we already found a filename */
-				error = 1;
-			}
-		}
-
-		if (error) {
-			fprintf(stderr, "Illegal argument: \"%s\"\n", argv[arg]);
-			help = 1;
-			error = 0;
+			case 'V':
+				printf("%s\n", VERSION);
+				return EXIT_SUCCESS;
+			default:
+				usage(argv[0]);
+				return EXIT_FAILURE;
 		}
 	}
 
-	if (help || (filename == NULL)) {
-		fprintf(stderr, "Usage:  jbi [options] <filename>\n");
-		fprintf(stderr, "\nAvailable options:\n");
-		fprintf(stderr, "    -h          : show help message\n");
-		fprintf(stderr, "    -v          : show verbose messages\n");
-		fprintf(stderr, "    -i          : show file info only - does not execute any action\n");
-		fprintf(stderr, "    -a<action>  : specify an action name (Jam STAPL)\n");
-		fprintf(stderr, "    -d<var=val> : initialize variable to specified value (Jam 1.1)\n");
-		fprintf(stderr, "    -d<proc=1>  : enable optional procedure (Jam STAPL)\n");
-		fprintf(stderr, "    -d<proc=0>  : disable recommended procedure (Jam STAPL)\n");
-		fprintf(stderr, "    -r          : don't reset JTAG TAP after use\n");
-		fprintf(stderr, "    -g<gpios>   : set gpio pin numbers, see below\n");
-		fprintf(stderr, "\n");
-		fprintf(stderr, "GPIO pin numbers are given in the following format:\n");
-		fprintf(stderr, "  <TCK>:<TDO>:<TDI>:<TMS> eg. 218:220:219:221\n");
-		exit_status = 1;
-	} else if (gpio_pins[0] == 0 && gpio_pins[1] == 0) {
+	filename = argv[optind];
+	if (!filename) {
+		usage(argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	if (execute_program && gpio_pins[0] == 0 && gpio_pins[1] == 0) {
 		fprintf(stderr, "No GPIO pins specified\n");
-		exit_status = 1;
-	} else if (access(filename, 0) != 0) {
-		fprintf(stderr, "Error: can't access file \"%s\"\n", filename);
-		exit_status = 1;
-	} else {
-		/* get length of file */
-		if (stat(filename, &sbuf) == 0) file_length = sbuf.st_size;
+		return EXIT_FAILURE;
+	}
 
-		if ((fp = fopen(filename, "rb")) == NULL)
-		{
-			fprintf(stderr, "Error: can't open file \"%s\"\n", filename);
-			exit_status = 1;
-		} else {
-			/*
-			*	Read entire file into a buffer
-			*/
-			file_buffer = malloc(file_length);
+	fp = fopen(filename, "rb");
+	if (!fp) {
+		perror("Error: can't open file '%s':");
+		return EXIT_FAILURE;
+	}
 
-			if (file_buffer == NULL)
-			{
-				fprintf(stderr, "Error: can't allocate memory (%d Kbytes)\n",
-					(int) (file_length / 1024L));
-				exit_status = 1;
-			} else {
-				if (fread(file_buffer, 1, (size_t) file_length, fp) !=
-					(size_t) file_length)
-				{
-					fprintf(stderr, "Error reading file \"%s\"\n", filename);
-					exit_status = 1;
-				}
-			}
+	/* get length of file */
+	fseek(fp, 0, SEEK_END);
+	file_length = ftello(fp);
+	rewind(fp);
 
-			fclose(fp);
+	/* Read entire file into a buffer */
+	file_buffer = malloc(file_length);
+
+	if (!file_buffer) {
+		fprintf(stderr, "Error: could not allocate memory\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fread(file_buffer, 1, file_length, fp) != file_length) {
+		fprintf(stderr, "Error reading file '%s'\n", filename);
+		return EXIT_FAILURE;
+	}
+
+	fclose(fp);
+
+	/* Check CRC */
+	error = altera_check_crc(file_buffer, file_length);
+
+	if (error == ALTERA_CRC_ERROR) {
+		fprintf(stderr, "Error: CRC mismatch.\n");
+		return EXIT_FAILURE;
+	} else if (error == ALTERA_IO_ERROR) {
+		fprintf(stderr, "Error: File format is not recognized.\n");
+		return EXIT_FAILURE;
+	} else if (error != 0) {
+		fprintf(stderr, "Error: Internal error (%d).\n", error);
+		return EXIT_FAILURE;
+	}
+
+	/* Display file format version */
+	if (verbose) {
+		int format_version;
+		int action_count;
+		int procedure_count;
+		char key[33] = {0};
+		char value[257] = {0};
+		int32_t offset = 0;
+
+		altera_get_file_info(file_buffer, file_length,
+			&format_version, &action_count, &procedure_count);
+
+		printf("File format is %s ByteCode format\n",
+			(format_version == 2) ? "Jam STAPL" : "pre-standardized Jam 1.1");
+
+		/* Dump out NOTE fields */
+		while (altera_get_note(file_buffer, file_length,
+					&offset, key, value, 256) == 0) {
+			printf("NOTE '%s' = '%s'\n", key, value);
 		}
 
-		if (exit_status == 0) {
-			/*
-			*	Check CRC
-			*/
-			crc_result = altera_check_crc(file_buffer, file_length);
+		/* Dump the action table */
+		if (format_version == 2 && action_count > 0) {
+			int i;
+			printf("\nActions available in this file:\n");
 
-			if (verbose || (crc_result == ALTERA_CRC_ERROR))
-			{
-				switch (crc_result)
-				{
-				case ALTERA_SUCCESS:
-					printf("CRC matched\n");
-					break;
+			for (i = 0; i < action_count; i++) {
+				char *action_name;
+				char *description;
+				struct altera_procinfo *procedure_list;
+				struct altera_procinfo *procptr;
 
-				case ALTERA_CRC_ERROR:
-					printf("CRC mismatch\n");
-					break;
+				altera_get_act_info(file_buffer, file_length,
+					i, &action_name, &description, &procedure_list);
 
-				case ALTERA_IO_ERROR:
-					printf("Error: File format is not recognized.\n");
-					exit(1);
-					break;
-
-				default:
-					printf("CRC function returned error code %d\n", crc_result);
-					break;
-				}
-			}
-
-			if (verbose) {
-				/*
-				*	Display file format version
-				*/
-				altera_get_file_info(file_buffer, file_length,
-					&format_version, &action_count, &procedure_count);
-
-				printf("File format is %s ByteCode format\n",
-					(format_version == 2) ? "Jam STAPL" : "pre-standardized Jam 1.1");
-
-				/*
-				*	Dump out NOTE fields
-				*/
-				while (altera_get_note(file_buffer, file_length,
-					&offset, key, value, 256) == 0)
-				{
-					printf("NOTE \"%s\" = \"%s\"\n", key, value);
-				}
-
-				/*
-				*	Dump the action table
-				*/
-				if ((format_version == 2) && (action_count > 0))
-				{
-					printf("\nActions available in this file:\n");
-
-					for (index = 0; index < action_count; ++index)
-					{
-						altera_get_act_info(file_buffer, file_length,
-							index, &action_name, &description, &procedure_list);
-
-						if (description == NULL)
-						{
-							printf("%s\n", action_name);
-						}
-						else
-						{
-							printf("%s \"%s\"\n", action_name, description);
-						}
-
-						procptr = procedure_list;
-						while (procptr != NULL)
-						{
-							if (procptr->attrs != 0)
-							{
-								printf("    %s (%s)\n", procptr->name,
-									(procptr->attrs == 1) ?
-									"optional" : "recommended");
-							}
-
-							procedure_list = procptr->next;
-							free(procptr);
-							procptr = procedure_list;
-						}
-					}
-
-					/* add a blank line before execution messages */
-					if (execute_program) printf("\n");
-				}
-			}
-
-			if (execute_program) {
-				/*
-				 *	Execute the Jam STAPL ByteCode program
-				 */
-				time(&start_time);
-				exec_result = altera_execute(file_buffer, file_length, action,
-					init_list, &error_address, &exit_code, &format_version);
-				time(&end_time);
-
-				if (exec_result == ALTERA_SUCCESS) {
-					exit_string = "Unknown exit code";
-					if (format_version == 2) {
-						if (exit_code < ARRAY_SIZE(exit_text_jam_v2)) {
-							exit_string = exit_text_jam_v2[exit_code];
-						}
-					} else {
-						if (exit_code < ARRAY_SIZE(exit_text_jam_v0_1)) {
-							exit_string = exit_text_jam_v0_1[exit_code];
-						}
-					}
-
-					if (exit_code != 0) {
-						exit_status = 2;
-					}
-
-					printf("Exit code = %d... %s\n", exit_code, exit_string);
-				} else if ((format_version == 2) &&
-					(exec_result == ALTERA_ACTION_NOT_FOUND)) {
-					if ((action == NULL) || (*action == '\0'))
-					{
-						printf("Error: no action specified for Jam STAPL file.\nProgram terminated.\n");
-						exit_status = 5;
-					}
-					else
-					{
-						printf("Error: action \"%s\" is not supported for this Jam STAPL file.\nProgram terminated.\n", action);
-						exit_status = 6;
-					}
-				} else if (exec_result < ALTERA_MAX_ERROR) {
-					printf("Error at address %d: %s.\nProgram terminated.\n",
-						error_address, error_text[exec_result]);
-					exit_status = 99;
+				if (description) {
+					printf("%s '%s'\n", action_name, description);
 				} else {
-					printf("Unknown error code %d\n", exec_result);
-					exit_status = 100;
+					printf("%s\n", action_name);
 				}
 
-				/*
-				 *	Print out elapsed time
-				 */
-				if (verbose) {
-					time_delta = (int) (end_time - start_time);
-					printf("Elapsed time = %02u:%02u:%02u\n",
-						time_delta / 3600,			/* hours */
-						(time_delta % 3600) / 60,	/* minutes */
-						time_delta % 60);			/* seconds */
+				procptr = procedure_list;
+				while (procptr) {
+					if (procptr->attrs) {
+						printf("    %s (%s)\n", procptr->name,
+								(procptr->attrs == 1) ? "optional" : "recommended");
+					}
+					procedure_list = procptr->next;
+					free(procptr);
+					procptr = procedure_list;
 				}
 			}
+
+			/* add a blank line before execution messages */
+			if (execute_program) {
+				printf("\n");
+			}
+		}
+	}
+
+	/* Execute the Jam STAPL ByteCode program */
+	if (execute_program) {
+		int32_t error_address;
+		int exit_code;
+		int format_version;
+		time_t start_time;
+		time_t end_time;
+		int exec_result;
+
+		time(&start_time);
+		exec_result = altera_execute(file_buffer, file_length, action,
+			init_list, &error_address, &exit_code, &format_version);
+		time(&end_time);
+
+		if (exec_result == ALTERA_SUCCESS) {
+			const char *exit_string = "Unknown exit code";
+			if (format_version == 2) {
+				if (exit_code < ARRAY_SIZE(exit_text_jam_v2)) {
+					exit_string = exit_text_jam_v2[exit_code];
+				}
+			} else {
+				if (exit_code < ARRAY_SIZE(exit_text_jam_v0_1)) {
+					exit_string = exit_text_jam_v0_1[exit_code];
+				}
+			}
+
+			if (exit_code != 0) {
+				error = 2;
+			}
+
+			printf("Exit code = %d... %s\n", exit_code, exit_string);
+		} else if ((format_version == 2) && (exec_result == ALTERA_ACTION_NOT_FOUND)) {
+			if (!action) {
+				printf("Error: no action specified for Jam STAPL file.\n");
+				error = 5;
+			} else {
+				printf("Error: action '%s' is not supported for this Jam STAPL file.\n", action);
+				error = 6;
+			}
+		} else if (exec_result < ALTERA_MAX_ERROR) {
+			printf("Error at address %d: %s. Aborting...\n",
+					error_address, error_text[exec_result]);
+			error = 99;
+		} else {
+			printf("Unknown error code (%d)\n", exec_result);
+			error = 100;
+		}
+
+		/* Print elapsed time */
+		if (verbose) {
+			printf("Program took %f seconds to execute.\n",
+					difftime(end_time, start_time));
 		}
 	}
 
@@ -572,6 +505,6 @@ int main(int argc, char **argv)
 	}
 	free(file_buffer);
 
-	return exit_status;
+	return error;
 }
 
