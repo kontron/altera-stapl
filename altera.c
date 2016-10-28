@@ -166,21 +166,21 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 		int *exit_code, int *format_version)
 {
 	char msg_buff[ALTERA_MESSAGE_LENGTH + 1] = {0};
-	long stack[ALTERA_STACK_SIZE] = {0};
+	int32_t stack[ALTERA_STACK_SIZE] = {0};
 	struct altera_jtag _js, *js = &_js;
 	int status = 0;
-	uint32_t first_word = 0L;
-	uint32_t action_table = 0L;
-	uint32_t proc_table = 0L;
-	uint32_t str_table = 0L;
-	uint32_t sym_table = 0L;
-	uint32_t data_sect = 0L;
-	uint32_t code_sect = 0L;
-	uint32_t debug_sect = 0L;
-	uint32_t action_count = 0L;
-	uint32_t proc_count = 0L;
-	uint32_t sym_count = 0L;
-	long *vars = NULL;
+	uint32_t first_word = 0;
+	uint32_t action_table = 0;
+	uint32_t proc_table = 0;
+	uint32_t str_table = 0;
+	uint32_t sym_table = 0;
+	uint32_t data_sect = 0;
+	uint32_t code_sect = 0;
+	uint32_t debug_sect = 0;
+	uint32_t action_count = 0;
+	uint32_t proc_count = 0;
+	uint32_t sym_count = 0;
+	intptr_t *vars = NULL;
 	int32_t *var_size = NULL;
 	char *attrs = NULL;
 	uint8_t *proc_attributes = NULL;
@@ -190,11 +190,11 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	uint32_t opcode;
 	uint32_t name_id;
 	uint8_t charbuf[4];
-	long long_tmp;
+	int32_t tmp;
 	uint32_t variable_id;
 	uint8_t *charptr_tmp;
 	uint8_t *charptr_tmp2;
-	long *longptr_tmp;
+	int32_t *ptr_tmp;
 	int version = 0;
 	int delta = 0;
 	int stack_ptr = 0;
@@ -204,9 +204,9 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	uint32_t count;
 	uint32_t index;
 	uint32_t index2;
-	int32_t long_count;
-	int32_t long_idx;
-	int32_t long_idx2;
+	int32_t cnt;
+	int32_t idx;
+	int32_t idx2;
 	uint32_t i;
 	uint32_t j;
 	uint32_t uncomp_size;
@@ -218,9 +218,9 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	char *name;
 
 	/* Read header information */
-	if (program_size > 52L) {
+	if (program_size > 52) {
 		first_word    = get_unaligned_be32(&p[0]);
-		version = (first_word & 1L);
+		version = (first_word & 1);
 		*format_version = version + 1;
 		delta = version * 8;
 
@@ -236,7 +236,7 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 		sym_count  = get_unaligned_be32(&p[48 + (2 * delta)]);
 	}
 
-	if ((first_word != 0x4A414D00L) && (first_word != 0x4A414D01L)) {
+	if ((first_word != 0x4A414D00) && (first_word != 0x4A414D01)) {
 		done = 1;
 		status = ALTERA_IO_ERROR;
 		goto exit_done;
@@ -245,7 +245,7 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 	if (sym_count <= 0)
 		goto exit_done;
 
-	vars = calloc(1, sym_count * sizeof(long));
+	vars = calloc(1, sym_count * sizeof(intptr_t));
 
 	if (vars == NULL)
 		status = ALTERA_OUT_OF_MEMORY;
@@ -311,8 +311,8 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 			uncomp_size = get_unaligned_le32(&p[data_sect + value]);
 
 			/* allocate a buffer for the uncompressed data */
-			vars[i] = (long)calloc(1, uncomp_size);
-			if (vars[i] == 0L)
+			vars[i] = (intptr_t)calloc(1, uncomp_size);
+			if (vars[i] == 0)
 				status = ALTERA_OUT_OF_MEMORY;
 			else {
 				/* set flag so buffer will be freed later */
@@ -327,12 +327,12 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 					/* decompression failed */
 					status = ALTERA_IO_ERROR;
 				else
-					var_size[i] = uncomp_size * 8L;
+					var_size[i] = uncomp_size * 8;
 
 			}
 		} else if ((attrs[i] & 0x1e) == 0x0c) {
 			/* initialized Boolean array */
-			vars[i] = value + data_sect + (long)p;
+			vars[i] = value + data_sect + (intptr_t)p;
 		} else if ((attrs[i] & 0x1c) == 0x1c) {
 			/* initialized integer array */
 			vars[i] = value + data_sect;
@@ -350,9 +350,9 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 					size = (var_size[i] * sizeof(int32_t));
 				else
 					/* Boolean array */
-					size = ((var_size[i] + 7L) / 8L);
+					size = ((var_size[i] + 7) / 8);
 
-				vars[i] = (long)calloc(1, size);
+				vars[i] = (intptr_t)calloc(1, size);
 
 				if (vars[i] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -502,9 +502,9 @@ exit_done:
 			break;
 		case OP_SWP:
 			if (altera_check_stack(stack_ptr, 2, &status)) {
-				long_tmp = stack[stack_ptr - 2];
+				tmp = stack[stack_ptr - 2];
 				stack[stack_ptr - 2] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 			break;
 		case OP_ADD:
@@ -551,7 +551,7 @@ exit_done:
 			break;
 		case OP_NOT:
 			if (altera_check_stack(stack_ptr, 1, &status))
-				stack[stack_ptr - 1] ^= (-1L);
+				stack[stack_ptr - 1] ^= -1;
 
 			break;
 		case OP_AND:
@@ -575,7 +575,7 @@ exit_done:
 		case OP_INV:
 			if (!altera_check_stack(stack_ptr, 1, &status))
 				break;
-			stack[stack_ptr - 1] = stack[stack_ptr - 1] ? 0L : 1L;
+			stack[stack_ptr - 1] = stack[stack_ptr - 1] ? 0 : 1;
 			break;
 		case OP_GT:
 			if (!altera_check_stack(stack_ptr, 2, &status))
@@ -583,7 +583,7 @@ exit_done:
 			--stack_ptr;
 			stack[stack_ptr - 1] =
 				(stack[stack_ptr - 1] > stack[stack_ptr]) ?
-									1L : 0L;
+									1 : 0;
 
 			break;
 		case OP_LT:
@@ -592,7 +592,7 @@ exit_done:
 			--stack_ptr;
 			stack[stack_ptr - 1] =
 				(stack[stack_ptr - 1] < stack[stack_ptr]) ?
-									1L : 0L;
+									1 : 0;
 
 			break;
 		case OP_RET:
@@ -647,17 +647,17 @@ exit_done:
 			if (altera_check_stack(stack_ptr, 4, &status)) {
 				int32_t a = stack[--stack_ptr];
 				int32_t b = stack[--stack_ptr];
-				long_tmp = stack[--stack_ptr];
+				tmp = stack[--stack_ptr];
 				count = stack[stack_ptr - 1];
 
 				if ((count < 1) || (count > 32))
 					status = ALTERA_BOUNDS_ERROR;
 				else {
-					long_tmp &= ((-1L) >> (32 - count));
+					tmp &= ((-1) >> (32 - count));
 
 					stack[stack_ptr - 1] =
-					((a & long_tmp) == (b & long_tmp))
-								? 1L : 0L;
+					((a & tmp) == (b & tmp))
+								? 1 : 0;
 				}
 			}
 			break;
@@ -669,7 +669,7 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 1, &status))
 				break;
 			sprintf(&msg_buff[strlen(msg_buff)],
-					"%ld", stack[--stack_ptr]);
+					"%d", stack[--stack_ptr]);
 			break;
 		case OP_PRNT:
 			/* PRINT finish */
@@ -684,9 +684,9 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 			count = stack[--stack_ptr];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_drscan(js, count, charbuf, 0);
 			break;
 		case OP_DSSC:
@@ -697,9 +697,9 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 			count = stack[stack_ptr - 1];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_swap_dr(js, count, charbuf,
 							0, charbuf, 0);
 			stack[stack_ptr - 1] = get_unaligned_le32(&charbuf[0]);
@@ -712,9 +712,9 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 			count = stack[--stack_ptr];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_irscan(js, count, charbuf, 0);
 			break;
 		case OP_ISSC:
@@ -725,9 +725,9 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 			count = stack[stack_ptr - 1];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_swap_ir(js, count, charbuf,
 							0, charbuf, 0);
 			stack[stack_ptr - 1] = get_unaligned_le32(&charbuf[0]);
@@ -747,8 +747,8 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
 			count = stack[--stack_ptr];
-			long_tmp = stack[--stack_ptr];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			tmp = stack[--stack_ptr];
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_set_dr_pre(js, count, 0,
 						charbuf);
 			break;
@@ -772,8 +772,8 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
 			count = stack[--stack_ptr];
-			long_tmp = stack[--stack_ptr];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			tmp = stack[--stack_ptr];
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_set_dr_post(js, count, 0,
 							charbuf);
 			break;
@@ -792,8 +792,8 @@ exit_done:
 			 */
 			if (altera_check_stack(stack_ptr, 2, &status)) {
 				count = stack[--stack_ptr];
-				long_tmp = stack[--stack_ptr];
-				put_unaligned_le32(long_tmp, &charbuf[0]);
+				tmp = stack[--stack_ptr];
+				put_unaligned_le32(tmp, &charbuf[0]);
 				status = altera_set_ir_pre(js, count,
 							0, charbuf);
 			}
@@ -818,8 +818,8 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
 			count = stack[--stack_ptr];
-			long_tmp = stack[--stack_ptr];
-			put_unaligned_le32(long_tmp, &charbuf[0]);
+			tmp = stack[--stack_ptr];
+			put_unaligned_le32(tmp, &charbuf[0]);
 			status = altera_set_ir_post(js, count, 0,
 							charbuf);
 			break;
@@ -852,7 +852,7 @@ exit_done:
 			--stack_ptr;
 			stack[stack_ptr - 1] =
 				(stack[stack_ptr - 1] == stack[stack_ptr]) ?
-									1L : 0L;
+									1 : 0;
 			break;
 		case OP_POPT:
 			if (altera_check_stack(stack_ptr, 1, &status))
@@ -882,32 +882,32 @@ exit_done:
 
 			/* SWP  */
 			if (altera_check_stack(stack_ptr, 2, &status)) {
-				long_tmp = stack[stack_ptr - 2];
+				tmp = stack[stack_ptr - 2];
 				stack[stack_ptr - 2] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* SWPN 7 */
 			index = 7 + 1;
 			if (altera_check_stack(stack_ptr, index, &status)) {
-				long_tmp = stack[stack_ptr - index];
+				tmp = stack[stack_ptr - index];
 				stack[stack_ptr - index] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* SWP  */
 			if (altera_check_stack(stack_ptr, 2, &status)) {
-				long_tmp = stack[stack_ptr - 2];
+				tmp = stack[stack_ptr - 2];
 				stack[stack_ptr - 2] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* SWPN 6 */
 			index = 6 + 1;
 			if (altera_check_stack(stack_ptr, index, &status)) {
-				long_tmp = stack[stack_ptr - index];
+				tmp = stack[stack_ptr - index];
 				stack[stack_ptr - index] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* DUPN 8 */
@@ -920,16 +920,16 @@ exit_done:
 			/* SWPN 2 */
 			index = 2 + 1;
 			if (altera_check_stack(stack_ptr, index, &status)) {
-				long_tmp = stack[stack_ptr - index];
+				tmp = stack[stack_ptr - index];
 				stack[stack_ptr - index] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* SWP  */
 			if (altera_check_stack(stack_ptr, 2, &status)) {
-				long_tmp = stack[stack_ptr - 2];
+				tmp = stack[stack_ptr - 2];
 				stack[stack_ptr - 2] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 
 			/* DUPN 6 */
@@ -1045,9 +1045,9 @@ exit_done:
 			 */
 			index = (args[0]) + 1;
 			if (altera_check_stack(stack_ptr, index, &status)) {
-				long_tmp = stack[stack_ptr - index];
+				tmp = stack[stack_ptr - index];
 				stack[stack_ptr - index] = stack[stack_ptr - 1];
-				stack[stack_ptr - 1] = long_tmp;
+				stack[stack_ptr - 1] = tmp;
 			}
 			break;
 		case OP_DUPN:
@@ -1090,9 +1090,9 @@ exit_done:
 				((attrs[variable_id] & 0x9c) == 0x1c)) {
 				/* Allocate a writable buffer for this array */
 				count = var_size[variable_id];
-				long_tmp = vars[variable_id];
-				longptr_tmp = calloc(1, count * sizeof(long));
-				vars[variable_id] = (long)longptr_tmp;
+				tmp = vars[variable_id];
+				ptr_tmp = calloc(1, count * sizeof(int32_t));
+				vars[variable_id] = (intptr_t)ptr_tmp;
 
 				if (vars[variable_id] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -1101,9 +1101,9 @@ exit_done:
 
 				/* copy previous contents into buffer */
 				for (i = 0; i < count; ++i) {
-					longptr_tmp[i] =
-						get_unaligned_be32(&p[long_tmp]);
-					long_tmp += sizeof(long);
+					ptr_tmp[i] =
+						get_unaligned_be32(&p[tmp]);
+					tmp += sizeof(int32_t);
 				}
 
 				/*
@@ -1122,13 +1122,13 @@ exit_done:
 			if ((attrs[variable_id] & 0x1c) != 0x18)
 				status = ALTERA_BOUNDS_ERROR;
 			else {
-				longptr_tmp = (long *)vars[variable_id];
+				ptr_tmp = (int32_t *)vars[variable_id];
 
 				/* pop the array index */
 				index = stack[--stack_ptr];
 
 				/* pop the value and store it into the array */
-				longptr_tmp[index] = stack[--stack_ptr];
+				ptr_tmp[index] = stack[--stack_ptr];
 			}
 
 			break;
@@ -1151,12 +1151,10 @@ exit_done:
 			if ((version > 0) &&
 				((attrs[variable_id] & 0x9c) == 0x0c)) {
 				/* Allocate a writable buffer for this array */
-				long_tmp =
-					(var_size[variable_id] + 7L) >> 3L;
+				tmp = (var_size[variable_id] + 7) >> 3;
 				charptr_tmp2 = (uint8_t *)vars[variable_id];
-				charptr_tmp =
-					calloc(1, long_tmp);
-				vars[variable_id] = (long)charptr_tmp;
+				charptr_tmp = calloc(1, tmp);
+				vars[variable_id] = (intptr_t)charptr_tmp;
 
 				if (vars[variable_id] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -1164,22 +1162,22 @@ exit_done:
 				}
 
 				/* zero the buffer */
-				for (long_idx = 0L;
-					long_idx < long_tmp;
-					++long_idx) {
-					charptr_tmp[long_idx] = 0;
+				for (idx = 0;
+					idx < tmp;
+					++idx) {
+					charptr_tmp[idx] = 0;
 				}
 
 				/* copy previous contents into buffer */
-				for (long_idx = 0L;
-					long_idx < var_size[variable_id];
-					++long_idx) {
-					long_idx2 = long_idx;
+				for (idx = 0;
+					idx < var_size[variable_id];
+					++idx) {
+					idx2 = idx;
 
-					if (charptr_tmp2[long_idx2 >> 3] &
-						(1 << (long_idx2 & 7))) {
-						charptr_tmp[long_idx >> 3] |=
-							(1 << (long_idx & 7));
+					if (charptr_tmp2[idx2 >> 3] &
+						(1 << (idx2 & 7))) {
+						charptr_tmp[idx >> 3] |=
+							(1 << (idx & 7));
 					}
 				}
 
@@ -1207,10 +1205,10 @@ exit_done:
 			charptr_tmp = (uint8_t *)vars[variable_id];
 
 			/* pop the count (number of bits to copy) */
-			long_count = stack[--stack_ptr];
+			cnt = stack[--stack_ptr];
 
 			/* pop the array index */
-			long_idx = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
 
 			reverse = 0;
 
@@ -1220,39 +1218,39 @@ exit_done:
 				 * stack 1 = array left index
 				 */
 
-				if (long_idx > long_count) {
+				if (idx > cnt) {
 					reverse = 1;
-					long_tmp = long_count;
-					long_count = 1 + long_idx -
-								long_count;
-					long_idx = long_tmp;
+					tmp = cnt;
+					cnt = 1 + idx -
+								cnt;
+					idx = tmp;
 
 					/* reverse POPA is not supported */
 					status = ALTERA_BOUNDS_ERROR;
 					break;
 				} else
-					long_count = 1 + long_count -
-								long_idx;
+					cnt = 1 + cnt -
+								idx;
 
 			}
 
 			/* pop the data */
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 
-			if (long_count < 1) {
+			if (cnt < 1) {
 				status = ALTERA_BOUNDS_ERROR;
 				break;
 			}
 
-			for (i = 0; i < long_count; ++i) {
-				if (long_tmp & (1L << (int32_t) i))
-					charptr_tmp[long_idx >> 3L] |=
-						(1L << (long_idx & 7L));
+			for (i = 0; i < cnt; ++i) {
+				if (tmp & (1 << (int32_t) i))
+					charptr_tmp[idx >> 3] |=
+						(1 << (idx & 7));
 				else
-					charptr_tmp[long_idx >> 3L] &=
-						~(1L << (long_idx & 7L));
+					charptr_tmp[idx >> 3] &=
+						~(1 << (idx & 7));
 
-				++long_idx;
+				++idx;
 			}
 
 			break;
@@ -1282,8 +1280,8 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_idx = stack[--stack_ptr];
-			long_count = stack[--stack_ptr];
+			idx = stack[--stack_ptr];
+			cnt = stack[--stack_ptr];
 			reverse = 0;
 			if (version > 0) {
 				/*
@@ -1291,12 +1289,12 @@ exit_done:
 				 * stack 1 = array left index
 				 * stack 2 = count
 				 */
-				long_tmp = long_count;
-				long_count = stack[--stack_ptr];
+				tmp = cnt;
+				cnt = stack[--stack_ptr];
 
-				if (long_idx > long_tmp) {
+				if (idx > tmp) {
 					reverse = 1;
-					long_idx = long_tmp;
+					idx = tmp;
 				}
 			}
 
@@ -1308,34 +1306,34 @@ exit_done:
 				 * and reverse the data order
 				 */
 				charptr_tmp2 = charptr_tmp;
-				charptr_tmp = calloc(1, (long_count >> 3) + 1);
+				charptr_tmp = calloc(1, (cnt >> 3) + 1);
 				if (charptr_tmp == NULL) {
 					status = ALTERA_OUT_OF_MEMORY;
 					break;
 				}
 
-				long_tmp = long_idx + long_count - 1;
-				long_idx2 = 0;
-				while (long_idx2 < long_count) {
-					if (charptr_tmp2[long_tmp >> 3] &
-							(1 << (long_tmp & 7)))
-						charptr_tmp[long_idx2 >> 3] |=
-							(1 << (long_idx2 & 7));
+				tmp = idx + cnt - 1;
+				idx2 = 0;
+				while (idx2 < cnt) {
+					if (charptr_tmp2[tmp >> 3] &
+							(1 << (tmp & 7)))
+						charptr_tmp[idx2 >> 3] |=
+							(1 << (idx2 & 7));
 					else
-						charptr_tmp[long_idx2 >> 3] &=
-							~(1 << (long_idx2 & 7));
+						charptr_tmp[idx2 >> 3] &=
+							~(1 << (idx2 & 7));
 
-					--long_tmp;
-					++long_idx2;
+					--tmp;
+					++idx2;
 				}
 			}
 
 			if (opcode == 0x51) /* DS */
-				status = altera_drscan(js, long_count,
-						charptr_tmp, long_idx);
+				status = altera_drscan(js, cnt,
+						charptr_tmp, idx);
 			else /* IS */
-				status = altera_irscan(js, long_count,
-						charptr_tmp, long_idx);
+				status = altera_irscan(js, cnt,
+						charptr_tmp, idx);
 
 			if (reverse)
 				free(charptr_tmp);
@@ -1443,8 +1441,8 @@ exit_done:
 			 */
 			if (altera_check_stack(stack_ptr, 1, &status)) {
 				name = &p[str_table + args[0]];
-				long_tmp = stack[--stack_ptr];
-				altera_export_int(name, long_tmp);
+				tmp = stack[--stack_ptr];
+				altera_export_int(name, tmp);
 			}
 			break;
 		case OP_PSHE:
@@ -1461,14 +1459,14 @@ exit_done:
 			/* check variable type */
 			if ((attrs[variable_id] & 0x1f) == 0x19) {
 				/* writable integer array */
-				longptr_tmp = (long *)vars[variable_id];
-				stack[stack_ptr - 1] = longptr_tmp[index];
+				ptr_tmp = (int32_t *)vars[variable_id];
+				stack[stack_ptr - 1] = ptr_tmp[index];
 			} else if ((attrs[variable_id] & 0x1f) == 0x1c) {
 				/* read-only integer array */
-				long_tmp = vars[variable_id] +
-						(index * sizeof(long));
+				tmp = vars[variable_id] +
+						(index * sizeof(int32_t));
 				stack[stack_ptr - 1] =
-					get_unaligned_be32(&p[long_tmp]);
+					get_unaligned_be32(&p[tmp]);
 			} else
 				status = ALTERA_BOUNDS_ERROR;
 
@@ -1510,14 +1508,14 @@ exit_done:
 				break;
 			}
 
-			long_tmp = 0L;
+			tmp = 0;
 
 			for (i = 0; i < count; ++i)
 				if (charptr_tmp[(i + index) >> 3] &
 						(1 << ((i + index) & 7)))
-					long_tmp |= (1L << i);
+					tmp |= (1 << i);
 
-			stack[stack_ptr - 1] = long_tmp;
+			stack[stack_ptr - 1] = tmp;
 
 			break;
 		case OP_DYNA:
@@ -1529,17 +1527,17 @@ exit_done:
 			if (!altera_check_stack(stack_ptr, 1, &status))
 				break;
 			variable_id = args[0];
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 
-			if (long_tmp > var_size[variable_id]) {
-				var_size[variable_id] = long_tmp;
+			if (tmp > var_size[variable_id]) {
+				var_size[variable_id] = tmp;
 
 				if (attrs[variable_id] & 0x10)
 					/* allocate integer array */
-					long_tmp *= sizeof(long);
+					tmp *= sizeof(int32_t);
 				else
 					/* allocate Boolean array */
-					long_tmp = (long_tmp + 7) >> 3;
+					tmp = (tmp + 7) >> 3;
 
 				/*
 				 * If the buffer was previously allocated,
@@ -1554,8 +1552,7 @@ exit_done:
 				 * Allocate a new buffer
 				 * of the requested size
 				 */
-				vars[variable_id] = (long)
-					calloc(1, long_tmp);
+				vars[variable_id] = (intptr_t)calloc(1, tmp);
 
 				if (vars[variable_id] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -1570,8 +1567,7 @@ exit_done:
 				attrs[variable_id] |= 0x80;
 
 				/* zero out memory */
-				count = ((var_size[variable_id] + 7L) /
-									8L);
+				count = ((var_size[variable_id] + 7) / 8);
 				charptr_tmp = (uint8_t *)(vars[variable_id]);
 				for (index = 0; index < count; ++index)
 					charptr_tmp[index] = 0;
@@ -1596,30 +1592,30 @@ exit_done:
 			}
 			name = &p[str_table + args[0]];
 			variable_id = stack[--stack_ptr];
-			long_idx = stack[--stack_ptr];/* right indx */
-			long_idx2 = stack[--stack_ptr];/* left indx */
+			idx = stack[--stack_ptr];/* right indx */
+			idx2 = stack[--stack_ptr];/* left indx */
 
-			if (long_idx > long_idx2) {
+			if (idx > idx2) {
 				/* reverse indices not supported */
 				status = ALTERA_BOUNDS_ERROR;
 				break;
 			}
 
-			long_count = 1 + long_idx2 - long_idx;
+			cnt = 1 + idx2 - idx;
 
 			charptr_tmp = (uint8_t *)vars[variable_id];
 			charptr_tmp2 = NULL;
 
-			if ((long_idx & 7L) != 0) {
-				int32_t k = long_idx;
+			if ((idx & 7) != 0) {
+				int32_t k = idx;
 				charptr_tmp2 =
-					calloc(1, ((long_count + 7L) / 8L));
+					calloc(1, ((cnt + 7) / 8));
 				if (charptr_tmp2 == NULL) {
 					status = ALTERA_OUT_OF_MEMORY;
 					break;
 				}
 
-				for (i = 0; i < long_count; ++i) {
+				for (i = 0; i < cnt; ++i) {
 					if (charptr_tmp[k >> 3] &
 							(1 << (k & 7)))
 						charptr_tmp2[i >> 3] |=
@@ -1632,14 +1628,14 @@ exit_done:
 				}
 				charptr_tmp = charptr_tmp2;
 
-			} else if (long_idx != 0)
-				charptr_tmp = &charptr_tmp[long_idx >> 3];
+			} else if (idx != 0)
+				charptr_tmp = &charptr_tmp[idx >> 3];
 
 			altera_export_bool_array(name, charptr_tmp,
-							long_count);
+							cnt);
 
 			/* free allocated buffer */
-			if ((long_idx & 7L) != 0)
+			if ((idx & 7) != 0)
 				free(charptr_tmp2);
 
 			break;
@@ -1727,12 +1723,10 @@ exit_done:
 			if ((version > 0) &&
 				((attrs[variable_id] & 0x9c) == 0x0c)) {
 				/* Allocate a writable buffer for this array */
-				long_tmp =
-					(var_size[variable_id] + 7L) >> 3L;
+				tmp = (var_size[variable_id] + 7) >> 3;
 				charptr_tmp2 = (uint8_t *)vars[variable_id];
-				charptr_tmp =
-					calloc(1, long_tmp);
-				vars[variable_id] = (long)charptr_tmp;
+				charptr_tmp = calloc(1, tmp);
+				vars[variable_id] = (intptr_t)charptr_tmp;
 
 				if (vars[variable_id] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -1740,20 +1734,19 @@ exit_done:
 				}
 
 				/* zero the buffer */
-				for (long_idx = 0L; long_idx < long_tmp;
-								++long_idx)
-					charptr_tmp[long_idx] = 0;
+				for (idx = 0; idx < tmp; ++idx)
+					charptr_tmp[idx] = 0;
 
 				/* copy previous contents into buffer */
-				for (long_idx = 0L;
-					long_idx < var_size[variable_id];
-								++long_idx) {
-					long_idx2 = long_idx;
+				for (idx = 0;
+					idx < var_size[variable_id];
+								++idx) {
+					idx2 = idx;
 
-					if (charptr_tmp2[long_idx2 >> 3] &
-						(1 << (long_idx2 & 7)))
-						charptr_tmp[long_idx >> 3] |=
-							(1 << (long_idx & 7));
+					if (charptr_tmp2[idx2 >> 3] &
+						(1 << (idx2 & 7)))
+						charptr_tmp[idx >> 3] |=
+							(1 << (idx & 7));
 
 				}
 
@@ -1839,7 +1832,7 @@ exit_done:
 				scan_index = scan_right;
 			}
 
-			long_count = stack[--stack_ptr];
+			cnt = stack[--stack_ptr];
 			/*
 			 * If capture array is read-only, allocate a buffer
 			 * and convert it to a writable array
@@ -1848,12 +1841,10 @@ exit_done:
 			if ((version > 0) &&
 				((attrs[variable_id] & 0x9c) == 0x0c)) {
 				/* Allocate a writable buffer for this array */
-				long_tmp =
-					(var_size[variable_id] + 7L) >> 3L;
+				tmp = (var_size[variable_id] + 7) >> 3;
 				charptr_tmp2 = (uint8_t *)vars[variable_id];
-				charptr_tmp =
-					calloc(1, long_tmp);
-				vars[variable_id] = (long)charptr_tmp;
+				charptr_tmp = calloc(1, tmp);
+				vars[variable_id] = (intptr_t)charptr_tmp;
 
 				if (vars[variable_id] == 0) {
 					status = ALTERA_OUT_OF_MEMORY;
@@ -1861,20 +1852,19 @@ exit_done:
 				}
 
 				/* zero the buffer */
-				for (long_idx = 0L; long_idx < long_tmp;
-								++long_idx)
-					charptr_tmp[long_idx] = 0;
+				for (idx = 0; idx < tmp; ++idx)
+					charptr_tmp[idx] = 0;
 
 				/* copy previous contents into buffer */
-				for (long_idx = 0L;
-					long_idx < var_size[variable_id];
-								++long_idx) {
-					long_idx2 = long_idx;
+				for (idx = 0;
+					idx < var_size[variable_id];
+								++idx) {
+					idx2 = idx;
 
-					if (charptr_tmp2[long_idx2 >> 3] &
-						(1 << (long_idx2 & 7)))
-						charptr_tmp[long_idx >> 3] |=
-							(1 << (long_idx & 7));
+					if (charptr_tmp2[idx2 >> 3] &
+						(1 << (idx2 & 7)))
+						charptr_tmp[idx >> 3] |=
+							(1 << (idx & 7));
 
 				}
 
@@ -1894,8 +1884,8 @@ exit_done:
 			charptr_tmp2 = (uint8_t *)vars[args[1]];
 
 			if ((version > 0) &&
-					((long_count > capture_count) ||
-					(long_count > scan_count))) {
+					((cnt > capture_count) ||
+					(cnt > scan_count))) {
 				status = ALTERA_BOUNDS_ERROR;
 				break;
 			}
@@ -1912,14 +1902,14 @@ exit_done:
 			if (status == 0) {
 				if (opcode == 0x82) /* DSC */
 					status = altera_swap_dr(js,
-							long_count,
+							cnt,
 							charptr_tmp,
 							scan_index,
 							charptr_tmp2,
 							capture_index);
 				else /* ISC */
 					status = altera_swap_ir(js,
-							long_count,
+							cnt,
 							charptr_tmp,
 							scan_index,
 							charptr_tmp2,
@@ -1939,17 +1929,17 @@ exit_done:
 			 */
 			if (!altera_check_stack(stack_ptr, 2, &status))
 				break;
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 
-			if (long_tmp != 0L)
-				status = altera_wait_cycles(js, long_tmp,
+			if (tmp != 0)
+				status = altera_wait_cycles(js, tmp,
 								args[0]);
 
-			long_tmp = stack[--stack_ptr];
+			tmp = stack[--stack_ptr];
 
-			if ((status == 0) && (long_tmp != 0L))
+			if ((status == 0) && (tmp != 0))
 				status = altera_wait_msecs(js,
-								long_tmp,
+								tmp,
 								args[0]);
 
 			if ((status == 0) && (args[1] != args[0]))
@@ -1986,7 +1976,7 @@ exit_done:
 			index1 = stack[--stack_ptr];
 			index2 = stack[--stack_ptr];
 			mask_index = stack[--stack_ptr];
-			long_count = stack[--stack_ptr];
+			cnt = stack[--stack_ptr];
 
 			if (version > 0) {
 				/*
@@ -2002,7 +1992,7 @@ exit_done:
 				/* source 1 count */
 				a = 1 + index2 - index1;
 				/* source 2 count */
-				b = 1 + long_count - mask_index;
+				b = 1 + cnt - mask_index;
 				a = (a < b) ? a : b;
 				/* mask count */
 				b = 1 + mask_left - mask_right;
@@ -2011,15 +2001,15 @@ exit_done:
 				index2 = mask_index;
 				/* mask start index */
 				mask_index = mask_right;
-				long_count = a;
+				cnt = a;
 			}
 
-			long_tmp = 1L;
+			tmp = 1;
 
-			if (long_count < 1)
+			if (cnt < 1)
 				status = ALTERA_BOUNDS_ERROR;
 			else {
-				count = long_count;
+				count = cnt;
 
 				for (i = 0; i < count; ++i) {
 					if (mask[mask_index >> 3] &
@@ -2032,7 +2022,7 @@ exit_done:
 								? 1 : 0;
 
 						if (a != b) /* failure */
-							long_tmp = 0L;
+							tmp = 0;
 					}
 					++index1;
 					++index2;
@@ -2040,7 +2030,7 @@ exit_done:
 				}
 			}
 
-			stack[stack_ptr++] = long_tmp;
+			stack[stack_ptr++] = tmp;
 
 			break;
 		}
@@ -2091,10 +2081,10 @@ int altera_get_note(uint8_t *p, int32_t program_size, int32_t *offset,
  */
 {
 	int status = ALTERA_UNEXPECTED_END;
-	uint32_t note_strings = 0L;
-	uint32_t note_table = 0L;
-	uint32_t note_count = 0L;
-	uint32_t first_word = 0L;
+	uint32_t note_strings = 0;
+	uint32_t note_table = 0;
+	uint32_t note_count = 0;
+	uint32_t first_word = 0;
 	int version = 0;
 	int delta = 0;
 	char *key_ptr;
@@ -2102,9 +2092,9 @@ int altera_get_note(uint8_t *p, int32_t program_size, int32_t *offset,
 	int i;
 
 	/* Read header information */
-	if (program_size > 52L) {
+	if (program_size > 52) {
 		first_word    = get_unaligned_be32(&p[0]);
-		version = (first_word & 1L);
+		version = (first_word & 1);
 		delta = version * 8;
 
 		note_strings  = get_unaligned_be32(&p[8 + delta]);
@@ -2112,10 +2102,10 @@ int altera_get_note(uint8_t *p, int32_t program_size, int32_t *offset,
 		note_count    = get_unaligned_be32(&p[44 + (2 * delta)]);
 	}
 
-	if ((first_word != 0x4A414D00L) && (first_word != 0x4A414D01L))
+	if ((first_word != 0x4A414D00) && (first_word != 0x4A414D01))
 		return ALTERA_IO_ERROR;
 
-	if (note_count <= 0L)
+	if (note_count <= 0)
 		return status;
 
 	if (offset == NULL) {
@@ -2180,20 +2170,20 @@ int altera_check_crc(uint8_t *p, int32_t program_size)
 	int bit, feedback;
 	uint8_t databyte;
 	uint32_t i;
-	uint32_t crc_section = 0L;
-	uint32_t first_word = 0L;
+	uint32_t crc_section = 0;
+	uint32_t first_word = 0;
 	int version = 0;
 	int delta = 0;
 
-	if (program_size > 52L) {
+	if (program_size > 52) {
 		first_word  = get_unaligned_be32(&p[0]);
-		version = (first_word & 1L);
+		version = (first_word & 1);
 		delta = version * 8;
 
 		crc_section = get_unaligned_be32(&p[32 + delta]);
 	}
 
-	if ((first_word != 0x4A414D00L) && (first_word != 0x4A414D01L))
+	if ((first_word != 0x4A414D00) && (first_word != 0x4A414D01))
 		status = ALTERA_IO_ERROR;
 
 	if (crc_section >= program_size)
@@ -2231,15 +2221,15 @@ int altera_get_file_info(uint8_t *p, int32_t program_size,
 	uint32_t first_word = 0;
 	int version = 0;
 
-	if (program_size <= 52L)
+	if (program_size <= 52)
 		return status;
 
 	first_word = get_unaligned_be32(&p[0]);
 
-	if ((first_word == 0x4A414D00L) || (first_word == 0x4A414D01L)) {
+	if ((first_word == 0x4A414D00) || (first_word == 0x4A414D01)) {
 		status = 0;
 
-		version = (first_word & 1L);
+		version = (first_word & 1);
 		*format_version = version + 1;
 
 		if (version > 0) {
@@ -2258,25 +2248,25 @@ int altera_get_act_info(uint8_t *p, int32_t program_size, int index,
 	int status = ALTERA_IO_ERROR;
 	struct altera_procinfo *procptr = NULL;
 	struct altera_procinfo *tmpptr = NULL;
-	uint32_t first_word = 0L;
-	uint32_t action_table = 0L;
-	uint32_t proc_table = 0L;
-	uint32_t str_table = 0L;
-	uint32_t note_strings = 0L;
-	uint32_t action_count = 0L;
-	uint32_t proc_count = 0L;
-	uint32_t act_name_id = 0L;
-	uint32_t act_desc_id = 0L;
-	uint32_t act_proc_id = 0L;
-	uint32_t act_proc_name = 0L;
+	uint32_t first_word = 0;
+	uint32_t action_table = 0;
+	uint32_t proc_table = 0;
+	uint32_t str_table = 0;
+	uint32_t note_strings = 0;
+	uint32_t action_count = 0;
+	uint32_t proc_count = 0;
+	uint32_t act_name_id = 0;
+	uint32_t act_desc_id = 0;
+	uint32_t act_proc_id = 0;
+	uint32_t act_proc_name = 0;
 	uint8_t act_proc_attribute = 0;
 
-	if (program_size <= 52L)
+	if (program_size <= 52)
 		return status;
 	/* Read header information */
 	first_word = get_unaligned_be32(&p[0]);
 
-	if (first_word != 0x4A414D01L)
+	if (first_word != 0x4A414D01)
 		return status;
 
 	action_table = get_unaligned_be32(&p[4]);
