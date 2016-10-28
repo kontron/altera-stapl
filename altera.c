@@ -1153,17 +1153,7 @@ exit_done:
 				}
 
 				/* copy previous contents into buffer */
-				for (idx = 0;
-					idx < var_size[variable_id];
-					++idx) {
-					idx2 = idx;
-
-					if (charptr_tmp2[idx2 >> 3] &
-						(1 << (idx2 & 7))) {
-						charptr_tmp[idx >> 3] |=
-							(1 << (idx & 7));
-					}
-				}
+				memcpy(charptr_tmp, charptr_tmp2, tmp);
 
 				/*
 				 * set bit 7 - buffer was
@@ -1711,17 +1701,7 @@ exit_done:
 				}
 
 				/* copy previous contents into buffer */
-				for (idx = 0;
-					idx < var_size[variable_id];
-								++idx) {
-					idx2 = idx;
-
-					if (charptr_tmp2[idx2 >> 3] &
-						(1 << (idx2 & 7)))
-						charptr_tmp[idx >> 3] |=
-							(1 << (idx & 7));
-
-				}
+				memcpy(charptr_tmp, charptr_tmp2, tmp);
 
 				/*
 				set bit 7 - buffer was dynamically allocated */
@@ -1825,17 +1805,7 @@ exit_done:
 				}
 
 				/* copy previous contents into buffer */
-				for (idx = 0;
-					idx < var_size[variable_id];
-								++idx) {
-					idx2 = idx;
-
-					if (charptr_tmp2[idx2 >> 3] &
-						(1 << (idx2 & 7)))
-						charptr_tmp[idx >> 3] |=
-							(1 << (idx & 7));
-
-				}
+				memcpy(charptr_tmp, charptr_tmp2, tmp);
 
 				/*
 				 * set bit 7 - buffer was
