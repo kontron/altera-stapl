@@ -43,11 +43,10 @@ enum gpio_pin {
 	GPIO_TDI,
 	GPIO_TMS
 };
-int gpio_pins[4] = {0,0,0,0};
-int gpio_fds[4] = {0,0,0,0};
-int gpio_state[4] = {-1,-1,-1,-1};
-
-int jtag_hardware_initialized = 0;
+static int gpio_pins[4] = {0,0,0,0};
+static int gpio_fds[4] = {0,0,0,0};
+static int gpio_state[4] = {-1,-1,-1,-1};
+static int jtag_hardware_initialized = 0;
 
 #define GPIO_PATH "/sys/class/gpio/"
 #define GPIO_EXPORT_PATH GPIO_PATH "export"
