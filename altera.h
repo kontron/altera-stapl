@@ -27,6 +27,7 @@
 #define _ALTERA_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct altera_config {
 	void *dev;
@@ -58,6 +59,8 @@ enum {
 	ALTERA_INTERNAL_ERROR,
 	ALTERA_MAX_ERROR
 };
+
+extern bool trace;
 
 int altera_check_crc(uint8_t *p, int32_t program_size);
 int altera_get_file_info(uint8_t *p, int32_t program_size,

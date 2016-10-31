@@ -47,6 +47,7 @@ static int gpio_pins[4] = {0,0,0,0};
 static int gpio_fds[4] = {0,0,0,0};
 static int gpio_state[4] = {-1,-1,-1,-1};
 static int jtag_hardware_initialized = 0;
+bool trace = false;
 
 #define GPIO_PATH "/sys/class/gpio/"
 #define GPIO_EXPORT_PATH GPIO_PATH "export"
@@ -275,7 +276,7 @@ int main(int argc, char **argv)
 	unsigned char *file_buffer;
 	off_t file_length;
 
-	while ((opt = getopt(argc, argv, "hvia:d:rg:V")) != -1) {
+	while ((opt = getopt(argc, argv, "hvia:d:rg:Vt")) != -1) {
 		switch (opt) {
 			case 'h':
 				usage(argv[0]);
@@ -327,6 +328,9 @@ int main(int argc, char **argv)
 			case 'V':
 				printf("%s\n", VERSION);
 				return EXIT_SUCCESS;
+			case 't':
+				trace = true;
+				break;
 			default:
 				usage(argv[0]);
 				return EXIT_FAILURE;

@@ -108,6 +108,86 @@ enum altera_fpga_opcode {
 	OP_VSC,
 };
 
+#define S(x) [x] = #x
+const char *op_str[] = {
+	S(OP_NOP),
+	S(OP_DUP),
+	S(OP_SWP),
+	S(OP_ADD),
+	S(OP_SUB),
+	S(OP_MULT),
+	S(OP_DIV),
+	S(OP_MOD),
+	S(OP_SHL),
+	S(OP_SHR),
+	S(OP_NOT),
+	S(OP_AND),
+	S(OP_OR),
+	S(OP_XOR),
+	S(OP_INV),
+	S(OP_GT),
+	S(OP_LT),
+	S(OP_RET),
+	S(OP_CMPS),
+	S(OP_PINT),
+	S(OP_PRNT),
+	S(OP_DSS),
+	S(OP_DSSC),
+	S(OP_ISS),
+	S(OP_ISSC),
+	S(OP_DPR),
+	S(OP_DPRL),
+	S(OP_DPO),
+	S(OP_DPOL),
+	S(OP_IPR),
+	S(OP_IPRL),
+	S(OP_IPO),
+	S(OP_IPOL),
+	S(OP_PCHR),
+	S(OP_EXIT),
+	S(OP_EQU),
+	S(OP_POPT),
+	S(OP_ABS),
+	S(OP_BCH0),
+	S(OP_PSH0),
+	S(OP_PSHL),
+	S(OP_PSHV),
+	S(OP_JMP),
+	S(OP_CALL),
+	S(OP_NEXT),
+	S(OP_PSTR),
+	S(OP_SINT),
+	S(OP_ST),
+	S(OP_ISTP),
+	S(OP_DSTP),
+	S(OP_SWPN),
+	S(OP_DUPN),
+	S(OP_POPV),
+	S(OP_POPE),
+	S(OP_POPA),
+	S(OP_JMPZ),
+	S(OP_DS),
+	S(OP_IS),
+	S(OP_DPRA),
+	S(OP_DPOA),
+	S(OP_IPRA),
+	S(OP_IPOA),
+	S(OP_EXPT),
+	S(OP_PSHE),
+	S(OP_PSHA),
+	S(OP_DYNA),
+	S(OP_EXPV),
+	S(OP_COPY),
+	S(OP_REVA),
+	S(OP_DSC),
+	S(OP_ISC),
+	S(OP_WAIT),
+	S(OP_VS),
+	S(OP_CMPA),
+	S(OP_VSC),
+};
+#undef S
+
 static inline uint16_t get_unaligned_be16(const uint8_t *p)
 {
 	return p[0] << 8 | p[1];
@@ -358,6 +438,15 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 
 		} else
 			vars[i] = 0;
+
+		if (trace) {
+			name_id = (version == 0)
+						? get_unaligned_be16(&p[offset + 1])
+						: get_unaligned_be32(&p[offset + 1]);
+			name = &p[str_table + name_id];
+			fprintf(stderr, "Variable #%d (%s) attrs=%x value=%08lx var_size=%d orig_value=%08x\n",
+					i, name, attrs[i], vars[i], var_size[i], value);
+		}
 	}
 
 	if (status != 0)
@@ -425,10 +514,7 @@ exit_done:
 			while ((i != 0) || first_time) {
 				first_time = 0;
 				/* check procedure attribute byte */
-				proc_attributes[i] =
-						(p[proc_table +
-								(13 * i) + 8] &
-									0x03);
+				proc_attributes[i] = (p[proc_table + (13 * i) + 8] & 0x03);
 
 				/*
 				 * BIT0 - OPTIONAL
@@ -476,11 +562,18 @@ exit_done:
 		opcode_address = pc;
 		++pc;
 
+		if (trace)
+			fprintf(stderr, "%06x: %-7s ", pc, op_str[opcode]);
+
 		arg_count = (opcode >> 6) & 3;
 		for (i = 0; i < arg_count; ++i) {
 			args[i] = get_unaligned_be32(&p[pc]);
 			pc += 4;
 		}
+
+		if (trace)
+			for (i = 0; i < arg_count; i++)
+				fprintf(stderr, "arg%d=%08x ", i, (uint32_t)args[i]);
 
 		switch (opcode) {
 		case OP_NOP:
@@ -608,6 +701,11 @@ exit_done:
 					done = 1;
 					*exit_code = 0;	/* success */
 				} else {
+					if (trace) {
+						name_id = get_unaligned_be32(&p[proc_table + (13 * i)]);
+						name = &p[str_table + name_id];
+						fprintf(stderr, "PROC#%d[%s] ", i, name);
+					}
 					current_proc = i;
 					pc = code_sect + get_unaligned_be32(
 								&p[proc_table +
@@ -1973,6 +2071,13 @@ exit_done:
 			/* Unrecognized opcode -- ERROR! */
 			bad_opcode = 1;
 			break;
+		}
+
+		if (trace) {
+			fprintf(stderr, "stack=[");
+			for (i = 0; i < stack_ptr; i++)
+				fprintf(stderr, "%08x ", (uint32_t)stack[stack_ptr-i-1]);
+			fprintf(stderr, "]\n");
 		}
 
 		if (bad_opcode)
