@@ -357,7 +357,7 @@ int main(int argc, char **argv)
 
 	fp = fopen(filename, "rb");
 	if (!fp) {
-		perror("Error: can't open file '%s':");
+		fprintf(stderr, "Error: can't open file '%s'", filename);
 		return EXIT_FAILURE;
 	}
 
