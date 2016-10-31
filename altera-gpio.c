@@ -271,7 +271,7 @@ int main(int argc, char **argv)
 	char *action = NULL;
 	bool verbose = false;
 	bool execute_program = true;
-	struct altera_varinit *init_list[10] = { NULL };
+	struct altera_varinit *init_list = NULL, *init_list_tail = NULL;
 	FILE *fp;
 	unsigned char *file_buffer;
 	off_t file_length;
@@ -293,21 +293,28 @@ int main(int argc, char **argv)
 				break;
 			case 'd':
 			{
-				int i = 0;
 				char *name = optarg;
 				char *value_str = strchr(name, '=');
-				uint32_t value;
 
 				if (name && value_str) {
-					*(value_str++) = '\n';
+					struct altera_varinit *varinit;
+					uint32_t value;
+					*(value_str++) = '\0';
 					value = strtoul(value_str, NULL, 0);
 
-					init_list[i] = alloca(sizeof(struct altera_varinit));
-					init_list[i]->name = name;
-					init_list[i]->value = value;
-				}
+					varinit = alloca(sizeof(struct altera_varinit));
+					varinit->name = name;
+					varinit->value = value;
+					varinit->next = NULL;
 
-				init_list[++i] = NULL;
+					if (!init_list) {
+						init_list = varinit;
+					}
+					if (init_list_tail) {
+						init_list_tail->next = varinit;
+					}
+					init_list_tail = varinit;
+				}
 			} break;
 			case 'r':
 				break;

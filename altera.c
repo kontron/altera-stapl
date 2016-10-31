@@ -242,7 +242,7 @@ static int altera_check_stack(int stack_ptr, int count, int *status)
 }
 
 int altera_execute(uint8_t *p, int32_t program_size, char *action,
-		struct altera_varinit **init_list, int32_t *error_address,
+		struct altera_varinit *init_list, int32_t *error_address,
 		int *exit_code, int *format_version)
 {
 	char msg_buff[ALTERA_MESSAGE_LENGTH + 1] = {0};
@@ -454,7 +454,8 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 
 	/* Initialize variables listed in init_list */
 	if (init_list) {
-		while (*init_list) {
+		struct altera_varinit *iter = init_list;
+		do {
 			for (i = 0; i < sym_count; ++i) {
 				offset = (sym_table + ((11 + delta) * i));
 				name_id = (version == 0)
@@ -462,11 +463,10 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 							: get_unaligned_be32(&p[offset + 1]);
 				name = &p[str_table + name_id];
 
-				if (strncasecmp((*init_list)->name, name, strlen(name)) == 0)
-					vars[i] = (*init_list)->value;
+				if (strncasecmp(iter->name, name, strlen(name)) == 0)
+					vars[i] = iter->value;
 			}
-			init_list++;
-		}
+		} while ((iter = iter->next));
 	}
 
 exit_done:
@@ -522,9 +522,18 @@ exit_done:
 				 * BIT6 - FORCED OFF
 				 * BIT7 - FORCED ON
 				 */
+				if (init_list) {
+					struct altera_varinit *iter = init_list;
+					name_id = get_unaligned_be32(&p[proc_table + (13 * i)]);
+					name = &p[str_table + name_id];
 
-				i = get_unaligned_be32(&p[proc_table +
-							(13 * i) + 4]);
+					do {
+						if (strncasecmp(iter->name, name, strlen(name)) == 0)
+							proc_attributes[i] |= iter->value ? 0x80 : 0x40;
+					} while ((iter = iter->next));
+				}
+
+				i = get_unaligned_be32(&p[proc_table + (13 * i) + 4]);
 			}
 
 			/*
@@ -532,20 +541,16 @@ exit_done:
 			 * to be executed
 			 */
 			i = current_proc;
-			while ((i != 0) &&
-				((proc_attributes[i] == 1) ||
-				((proc_attributes[i] & 0xc0) == 0x40))) {
-				i = get_unaligned_be32(&p[proc_table +
-							(13 * i) + 4]);
+			while ((i != 0) && ((proc_attributes[i] == 1)
+					|| ((proc_attributes[i] & 0xc0) == 0x40))) {
+				i = get_unaligned_be32(&p[proc_table + (13 * i) + 4]);
 			}
 
-			if ((i != 0) || ((i == 0) && (current_proc == 0) &&
-				((proc_attributes[0] != 1) &&
-				((proc_attributes[0] & 0xc0) != 0x40)))) {
+			if ((i != 0) || ((i == 0) && (current_proc == 0)
+						&& ((proc_attributes[0] != 1)
+						&& ((proc_attributes[0] & 0xc0) != 0x40)))) {
 				current_proc = i;
-				pc = code_sect +
-					get_unaligned_be32(&p[proc_table +
-								(13 * i) + 9]);
+				pc = code_sect + get_unaligned_be32(&p[proc_table + (13 * i) + 9]);
 				if ((pc < code_sect) || (pc >= debug_sect))
 					status = ALTERA_BOUNDS_ERROR;
 			} else

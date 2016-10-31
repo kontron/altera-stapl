@@ -44,6 +44,7 @@ struct altera_procinfo {
 struct altera_varinit {
 	char *name;
 	uint32_t value;
+	struct altera_varinit *next;
 };
 
 enum {
@@ -71,7 +72,7 @@ int altera_get_act_info(uint8_t *p, int32_t program_size, int index,
 		char **name, char **description,
 		struct altera_procinfo **proc_list);
 int altera_execute(uint8_t *p, int32_t program_size, char *action,
-		struct altera_varinit **init_list, int32_t *error_address,
+		struct altera_varinit *init_list, int32_t *error_address,
 		int *exit_code, int *format_version);
 
 void altera_message(char *message_text);
