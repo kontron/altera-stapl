@@ -423,7 +423,7 @@ int main(int argc, char **argv)
 
 			for (i = 0; i < action_count; i++) {
 				char *action_name;
-				char *description;
+				char *description = NULL;
 				struct altera_procinfo *procedure_list;
 				struct altera_procinfo *procptr;
 
