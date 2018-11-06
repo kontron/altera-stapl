@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <inttypes.h>
 #include "altera.h"
 #include "altera-jtag.h"
 
@@ -444,7 +445,7 @@ int altera_execute(uint8_t *p, int32_t program_size, char *action,
 						? get_unaligned_be16(&p[offset + 1])
 						: get_unaligned_be32(&p[offset + 1]);
 			name = &p[str_table + name_id];
-			fprintf(stderr, "Variable #%d (%s) attrs=%x value=%08lx var_size=%d orig_value=%08x\n",
+			fprintf(stderr, "Variable #%d (%s) attrs=%x value=%" PRIxPTR " var_size=%d orig_value=%08x\n",
 					i, name, attrs[i], vars[i], var_size[i], value);
 		}
 	}
