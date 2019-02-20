@@ -253,6 +253,7 @@ void usage(const char *progname)
 			"Options:\n"
 			"    -h          : show help message\n"
 			"    -v          : show verbose messages\n"
+			"    -t          : show trace messages\n"
 			"    -i          : show file info only - does not execute any action\n"
 			"    -a<action>  : specify an action name (Jam STAPL)\n"
 			"    -d<var=val> : initialize variable to specified value (Jam 1.1)\n"
