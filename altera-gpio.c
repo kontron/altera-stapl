@@ -260,7 +260,10 @@ void usage(const char *progname)
 			"    -d<proc=1>  : enable optional procedure (Jam STAPL)\n"
 			"    -d<proc=0>  : disable recommended procedure (Jam STAPL)\n"
 			"    -r          : don't reset JTAG TAP after use\n"
-			"    -g<gpios>   : set gpio pin numbers, see below\n",
+			"    -g<gpios>   : set gpio pin numbers, see below\n"
+			"\n"
+			"GPIO pin numbers are given in the following format:\n"
+			"  <TCK>:<TDO>:<TDI>:<TMS> eg. 218:220:219:221\n",
 			VERSION, progname);
 }
 
