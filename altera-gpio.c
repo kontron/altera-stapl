@@ -423,9 +423,9 @@ int main(int argc, char **argv)
 			printf("\nActions available in this file:\n");
 
 			for (i = 0; i < action_count; i++) {
-				char *action_name;
-				char *description;
-				struct altera_procinfo *procedure_list;
+				char *action_name = NULL;
+				char *description = NULL;
+				struct altera_procinfo *procedure_list = NULL;
 				struct altera_procinfo *procptr;
 
 				altera_get_act_info(file_buffer, file_length,
