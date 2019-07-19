@@ -28,7 +28,7 @@ clean:
 	$(CC) -c $< $(CLFAGS) $(EXTRA_CFLAGS)
 
 altera-stapl: $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -lgpiod -o $@ $^
 
 install: altera-stapl
 	install -D -m 0755 altera-stapl $(DESTDIR)$(BINDIR)/altera-stapl
