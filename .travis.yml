@@ -1,6 +1,6 @@
 language: c
 sudo: false # only for faster builds
-dist: trusty
+dist: bionic
 
 matrix:
   include:
