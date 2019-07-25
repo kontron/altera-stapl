@@ -1,6 +1,6 @@
 TOPDIR := $(shell pwd)
 
-VERSION := 0.3
+VERSION := 0.3.1
 
 # install directories
 PREFIX ?= /usr
