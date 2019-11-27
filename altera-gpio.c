@@ -208,6 +208,9 @@ static void close_jtag_hardware()
 	int i;
 	for (i = 0; i < 4; i++) {
 		gpiod_line_release(gpio_lines[i]);
+		/* make sure all lines are switched back to input mode */
+		gpiod_line_request_input(gpio_lines[i], "altera-stapl");
+		gpiod_line_release(gpio_lines[i]);
 	}
 }
 
