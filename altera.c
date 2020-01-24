@@ -216,6 +216,7 @@ static inline void put_unaligned_le32(uint32_t val, uint8_t *p)
 	*p++ = val >> 24;
 }
 
+__attribute__ ((weak))
 size_t strlcpy(char *dest, const char *src, size_t size)
 {
 	size_t ret = strlen(src);
