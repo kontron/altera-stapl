@@ -1,7 +1,7 @@
 altera-stapl
 ============
 
-[![Build Status](https://img.shields.io/travis/kontron/altera-stapl/master.svg)](https://travis-ci.org/kontron/altera-stapl)
+![Build Status](https://github.com/kontron/altera-stapl/workflows/build/badge.svg)
 
 Alteras Jam STAPL Bytecode Player with 64-bit support. This is a user-space
 port of the altera-stapl driver from the linux kernel. The source released
