@@ -1,0 +1,26 @@
+name: build
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build on ${{matrix.compiler}}
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        compiler: ["gcc-10", "gcc-11", "gcc-12", "clang-11", "clang-12", "clang-13", "clang-14"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: sudo apt-get -y install libgpiod-dev ${{matrix.compiler}}
+
+      - name: Compile
+        run: make CC=${{matrix.compiler}}
